@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package mxgate;
+
+import "google/protobuf/empty.proto";
+
+option java_package = "api.matrix.mxgate";
+
+// Get MxGate Status
+message GetMxGateStatus {
+  message Response {
+    int32 code = 1;
+    string msg = 2;
+    MxGateStatus status = 3;
+  }
+}
+
+message MxGateStatus {
+  int32 pid = 1;
+  string launch_at = 2;
+  int64 up_for = 3;
+  string binary_path = 4;
+  string log_path = 5;
+  string config_path = 6;
+}

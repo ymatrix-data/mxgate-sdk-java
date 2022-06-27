@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "cn.ymatrix.api";
+option java_outer_classname = "MxGateService";
+option objc_class_prefix = "MXS";
+
+
+package api;
+
+
+service MXGate {
+  // Get the target Job Metadata
+  rpc GetJobMetadata(GetJobMetadata.Request) returns (GetJobMetadata.Response);
+  // Send data to MxGate
+  rpc SendData(SendData.Request) returns (SendData.Response);
+}
+
+// Get Job Metadata.
+message GetJobMetadata {
+  message Request {
+    string schema = 1;
+    string table = 2;
+  }
+  message Response {
+    int32 code = 1;
+    string msg = 2;
+
+    JobMetadata metadata = 3;
+  }
+}
+
+message JobMetadata {
+  string schema = 1;
+  string table = 2;
+  string projection = 3;
+  string insert_projection = 4;
+  string select_projection = 5;
+  string unique_key_clause = 6;
+  string delimiter = 7;
+  repeated ColumnMeta columns = 8;
+}
+
+message ColumnMeta {
+  string type = 1;
+  string name = 2;
+  int32 num = 3;
+  bool is_not_null = 4;
+  bool is_set_default = 5;
+  string default = 6;
+  bool is_serial = 7;
+  bool is_excluded = 8;
+  bool is_upsert_key = 9;
+  bool is_deduplicate_key = 10;
+}
+
+// Send data to MxGate server.
+message SendData {
+  message Request {
+    string schema = 1;
+    string table = 2;
+    string data = 3;
+  }
+  message Response {
+    int32 code = 1;
+    string msg = 2;
+
+    int64 tuple_count = 3;
+    map<int64, string> error_lines = 4;
+  }
+}
+
+enum Code {
+  OK = 0;
+  ERROR = 1;
+  UNDEFINED_ERROR = 10;
+  // Broker not available
+  INVALID_BROKERS = 2;
+  TOPIC_NOT_FOUND = 3;
+
+  INVALID_REQUEST = 4;
+  INVALID_CONFIG = 5; // currently not likely to get this code
+  INVALID_TABLE = 6; // e.g. table not exist, table without column, more than one column when delimiter is "off"
+  MXGATE_NOT_READY = 7;
+  TIMEOUT = 8;
+  ALL_TUPLES_FAILED = 9; // e.g. all rows in flow are failed to insert, and this code is for client to recognize and retry
+}

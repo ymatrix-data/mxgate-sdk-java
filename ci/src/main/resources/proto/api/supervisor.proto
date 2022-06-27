@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package api;
+
+import "api/supervisor/program.proto";
+
+// Supervisor APIs, please refer http://supervisord.org/configuration.html#program-x-section-settings
+// for context of supervisor. The original supervisor works based on a local config file, this APIs allows control
+// supervisor with gRPC calls.
+service Program {
+  // RegisterProgram as a service as a child process of supervisor to run in background.
+  // This program is permanently added to supervisor config and can autostart with supervisor.
+  // This rpc call finishes as soon as the program changed to running state (if autostart is on).
+  rpc RegisterProgram(supervisor.RegisterProgram.Request) returns (supervisor.RegisterProgram.Response);
+  // UnregisterProgram stop and permanently remove the program from supervisor config.
+  rpc UnregisterProgram(supervisor.UnregisterProgram.Request) returns (supervisor.UnregisterProgram.Response);
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package api;
+
+import "api/gate/mxgate.proto";
+import "google/protobuf/empty.proto";
+
+service MXGate {
+  // Get MxGate process status(alive, stopped).
+  rpc GetMxGateStatus(google.protobuf.Empty) returns (mxgate.GetMxGateStatus.Response);
+}

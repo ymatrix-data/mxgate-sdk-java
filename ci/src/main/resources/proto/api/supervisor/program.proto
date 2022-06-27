@@ -1,0 +1,195 @@
+syntax = "proto3";
+
+package api.supervisor;
+
+import "github.com/envoyproxy/protoc-gen-validate/validate/validate.proto";
+
+option java_package = "api.matrix.supervisor";
+
+// Copy from matrixapis
+enum StopSignal {
+  STOP_SIGNAL_TERM = 0;
+  STOP_SIGNAL_INT = 1;
+  STOP_SIGNAL_HUP = 2;
+  STOP_SIGNAL_QUIT = 3;
+  STOP_SIGNAL_KILL = 4;
+  STOP_SIGNAL_USR1 = 5;
+  STOP_SIGNAL_USR2 = 6;
+}
+
+message ProgramConfig {
+  // command: The command that will be run when this program is started. The command can be either absolute
+  // (e.g. /path/to/programname) or relative (e.g. programname). If it is relative, the supervisord’s environment $PATH
+  // will be searched for the executable. Programs can accept arguments, e.g. /path/to/program foo bar. The command line
+  // can use double quotes to group arguments with spaces in them to pass to the program, e.g. /path/to/program/name -p
+  // "foo bar". Note that the value of command may include Python string expressions,
+  // e.g. /path/to/programname --port=80%(process_num)02d might expand to /path/to/programname --port=8000 at runtime.
+  // String expressions are evaluated against a dictionary containing the keys group_name, host_node_name, program_name,
+  // process_num, numprocs, here (the directory of the supervisord config file), and all supervisord’s environment
+  // variables prefixed with ENV_. Controlled programs should themselves not be daemons, as supervisord assumes it is
+  // responsible for daemonizing its subprocesses (see Nondaemonizing of Subprocesses).
+  // Required: Yes
+  // Note:
+  //   - The command will be truncated if it looks like a config file comment, e.g. command=bash -c 'foo ; bar' will be
+  //     truncated to command=bash -c 'foo. Quoting will not prevent this behavior, since the configuration file reader
+  //     does not parse the command like a shell would.
+  string command = 1 [(validate.rules).string.min_len = 1];
+  // directory: A file path representing a directory to which supervisord should temporarily chdir before exec’ing the
+  // child.
+  // Default: No chdir (inherit supervisor’s)
+  string directory = 2;
+  // stopsignal: The signal used to kill the program when a stop is requested. This can be specified using the signal’s
+  // name or its number. It is normally one of: TERM, HUP, INT, QUIT, KILL, USR1, or USR2.
+  // Default: TERM
+  StopSignal stop_signal = 3;
+  // stopwaitsecs: The number of seconds to wait for the OS to return a SIGCHLD to supervisord after the program has
+  // been sent a stopsignal. If this number of seconds elapses before supervisord receives a SIGCHLD from the process,
+  // supervisord will attempt to kill it with a final SIGKILL.
+  // Default: 10
+  int32 stop_wait_sec = 4;
+  // stopasgroup: If true, the flag causes supervisor to send the stop signal to the whole process group and implies
+  // killasgroup is true. This is useful for programs, such as Flask in debug mode, that do not propagate stop signals
+  // to their children, leaving them orphaned.
+  // Default: false
+  bool stop_as_group = 5;
+  // killasgroup: If true, when resorting to send SIGKILL to the program to terminate it send it to its whole process
+  // group instead, taking care of its children as well, useful e.g with Python programs using multiprocessing.
+  // Default: false
+  bool kill_as_group = 6;
+  // redirect_stderr: If true, cause the process’ stderr output to be sent back to supervisord on its stdout file
+  // descriptor (in UNIX shell terms, this is the equivalent of executing /the/program 2>&1).
+  // Default: false
+  bool redirect_stderr = 7;
+  // stdout_logfile: Put process stdout output in this file (and if redirect_stderr is true, also place stderr output in
+  // this file). If stdout_logfile is unset or set to AUTO, supervisor will automatically choose a file location. If
+  // this is set to empty (default), supervisord will create no log file. AUTO log files and their backups will be
+  // deleted when supervisord restarts. The stdout_logfile value can contain Python string expressions that will
+  // evaluated against a dictionary that contains the keys group_name, host_node_name, process_num, program_name, and
+  // here (the directory of the supervisord config file).
+  // Note:
+  //   - It is not possible for two processes to share a single log file (stdout_logfile) when rotation
+  //     (stdout_logfile_maxbytes) is enabled. This will result in the file being corrupted.
+  //   - If stdout_logfile is set to a special file like /dev/stdout that is not seekable, log rotation must be disabled
+  //     by setting stdout_logfile_maxbytes = 0.
+  string stdout_logfile = 8;
+  // stdout_logfile_maxbytes: The maximum number of bytes that may be consumed by stdout_logfile before it is rotated
+  // (suffix multipliers like “KB”, “MB”, and “GB” can be used in the value). Set this value to -1 to indicate an
+  // unlimited log size.
+  // Default: 0 means 50MB
+  string stdout_logfile_maxbytes = 9;
+  // stdout_logfile_backups: The number of stdout_logfile backups to keep around resulting from process stdout log file
+  // rotation. If set to -1, no backups will be kept.
+  // Default: 0 means 10
+  int32 stdout_logfile_backups = 10;
+  // stderr_logfile: Put process stderr output in this file unless redirect_stderr is true. Accepts the same value types
+  // as stdout_logfile and may contain the same Python string expressions.
+  // Note:
+  //   - It is not possible for two processes to share a single log file (stderr_logfile) when rotation
+  //     (stderr_logfile_maxbytes) is enabled. This will result in the file being corrupted.
+  //   - If stderr_logfile is set to a special file like /dev/stderr that is not seekable, log rotation must be disabled
+  //     by setting stderr_logfile_maxbytes = 0.
+  string stderr_logfile = 11;
+  // stderr_logfile_maxbytes: The maximum number of bytes before logfile rotation for stderr_logfile. Accepts the same
+  // value types as stdout_logfile_maxbytes.
+  // Default: 0 means 50MB
+  string stderr_logfile_maxbytes = 12;
+  // stderr_logfile_backups: The number of backups to keep around resulting from process stderr log file rotation. If
+  // set to -1, no backups will be kept.
+  // Default: 0 means 10
+  int32 stderr_logfile_backups = 13;
+  // user: Instruct supervisord to use this UNIX user account as the account which runs the program. The user can only
+  // be switched if supervisord is run as the root user. If supervisord can’t switch to the specified user, the program
+  // will not be started.
+  // Default: Do not switch users
+  // Note:
+  //   - The user will be changed using setuid only. This does not start a login shell and does not change environment
+  //     variables like USER or HOME.
+  //     See Subprocess Environment (http://supervisord.org/subprocess.html#subprocess-environment) for details.
+  string user = 14;
+  // environment: A list of key/value pairs in the form KEY="val",KEY2="val2" that will be placed in the child process’
+  // environment. The environment string may contain Python string expressions that will be evaluated against a
+  // dictionary containing group_name, host_node_name, process_num, program_name, and here (the directory of the
+  // supervisord config file). Values containing non-alphanumeric characters should be quoted
+  // (e.g. KEY="val:123",KEY2="val,456"). Otherwise, quoting the values is optional but recommended.Note that the
+  // subprocess will inherit the environment variables of the shell used to start “supervisord” except for the ones
+  // overridden here. See Subprocess Environment (http://supervisord.org/subprocess.html#subprocess-environment).
+  // Default: No extra environment
+  string environment = 15;
+  // umask: The umask of the supervisord process.
+  // Default: 022
+  string umask = 16;
+
+  // cgroup configurations
+  // v2 will be prefered if both v1 and v2 are set.
+
+  // cgroup_v1: The path of cgroup v1 group to put into. (without /sys/fs/cgroup prefix)
+  // Default: ""
+  string cgroup_v1 = 17;
+  // cgroup_v2: The systemd v2 cgroup slice name to into. (avoid using '-' in the value)
+  // Default: ""
+  string cgroup_v2 = 18;
+}
+
+enum AutoStart {
+  AUTO_START_YES = 0;
+  AUTO_START_NO = 1;
+}
+
+enum AutoRestart {
+  AUTO_RESTART_UNEXPECTED = 0;
+  AUTO_RESTART_YES = 1;
+  AUTO_RESTART_NO = 2;
+}
+
+message DaemonConfig {
+  // autostart: If yes, this program will start automatically when supervisord is started.
+  // Default: yes
+  AutoStart auto_start = 1;
+  // startretries: The number of serial failure attempts that supervisord will allow when attempting to start the
+  // program before giving up and putting the process into an FATAL state.
+  // Default: 3
+  // Note:
+  //   - After each failed restart, process will be put in BACKOFF state and each retry attempt will take increasingly
+  //     more time.
+  //   - See Process States (http://supervisord.org/subprocess.html#process-states) for explanation of the FATAL and
+  //     BACKOFF states.
+  int32 start_retries = 2;
+  // autorestart: Specifies if supervisord should automatically restart a process if it exits when it is in the RUNNING
+  // state. May be one of false, unexpected, or true. If false, the process will not be autorestarted. If unexpected,
+  // the process will be restarted when the program exits with an exit code that is not one of the exit codes associated
+  // with this process’ configuration (see exitcodes). If true, the process will be unconditionally restarted when it
+  // exits, without regard to its exit code.
+  // Default: unexpected
+  // Note:
+  //  - autorestart controls whether supervisord will autorestart a program if it exits after it has successfully
+  //    started up (the process is in the RUNNING state).
+  //  - supervisord has a different restart mechanism for when the process is starting up (the process is in the
+  //    STARTING state). Retries during process startup are controlled by startsecs and startretries.
+  AutoRestart auto_restart = 3;
+  // exitcodes: The list of “expected” exit codes for this program used with autorestart. If the autorestart parameter
+  // is set to unexpected, and the process exits in any other way than as a result of a supervisor stop request,
+  // supervisord will restart the process if it exits with an exit code that is not defined in this list.
+  // (e.g. 0,2,127)
+  // Default: 0
+  string exit_codes = 4;
+}
+
+message RegisterProgram {
+  message Request {
+    string name = 1 [(validate.rules).string.min_len = 1]; // program name
+    ProgramConfig config = 2;
+    DaemonConfig daemon = 3;
+    string stdin = 4; // stdin to the program once started
+    int32 timeout_sec = 5; // timeout seconds
+  }
+  message Response {}
+}
+
+message UnregisterProgram {
+  message Request {
+    string name = 1 [(validate.rules).string.min_len = 1]; // program name
+    bool wait = 2;
+    int32 timeout_sec = 3; // timeout seconds
+  }
+  message Response {}
+}
